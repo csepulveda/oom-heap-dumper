@@ -42,7 +42,8 @@ func watchProcesses(ticks <-chan time.Time, getProcesses func() ([]proc.Process,
 		for _, p := range ps {
 			pct, err := p.MemoryUsagePercent()
 			if err != nil {
-				log.Printf("error reading mem usage for pid %d: %s", p.Pid(), err)
+				// too much logs
+				//log.Printf("error reading mem usage for pid %d: %s", p.Pid(), err)
 				continue
 			}
 
