@@ -18,7 +18,9 @@ This application is designed to be used as a sidecar container in Kubernetes pod
 
 ## Security Requirements
 
-This application requires elevated privileges to monitor processes within the Kubernetes pod. Therefore, you need to set `securityContext.privileged: true` in the Kubernetes configuration for the sidecar container.
+To monitor processes within the Kubernetes pod, this application requires elevated privileges. Ensure that you set `securityContext.privileged: true` in the Kubernetes configuration for the sidecar container.
+
+Additionally, enable the `shareProcessNamespace` setting in the pod specification. This allows the sidecar container to access process information across all containers within the pod. [For more details, refer to the Kubernetes documentation on sharing the process namespace.](https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/)
 
 ## Environment Variables
 
@@ -37,6 +39,7 @@ kind: Pod
 metadata:
   name: memory-profiler
 spec:
+  shareProcessNamespace: true
   containers:
     - name: main-app
       image: your-main-app-image
