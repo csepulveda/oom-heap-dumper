@@ -86,6 +86,7 @@ To test the application locally or in a Kubernetes environment, set up your AWS 
 export AWS_REGION=us-west-2
 export BUCKET=my-s3-bucket
 export MEMORY_CRITICAL_PERCENTAGE=80
+export WATCH_TIME=500
 ```
 
 Then run the application to start monitoring memory usage.

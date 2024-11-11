@@ -12,24 +12,26 @@ import (
 )
 
 var (
-	critical uint64        = 80
-	cooldown time.Duration = time.Second * 30
-	bucket   string        = "heapDumpBucket"
+	critical  uint64        = 80
+	cooldown  time.Duration = time.Second * 30
+	bucket    string        = "heapDumpBucket"
+	watchTime time.Duration = time.Millisecond * 1000
 )
 
 func main() {
-	watchProcesses(time.NewTicker(time.Second).C, getOsProcesses)
+	watchProcesses(time.NewTicker(watchTime).C, getOsProcesses)
 }
 
 func watchProcesses(ticks <-chan time.Time, getProcesses func() ([]proc.Process, error)) {
 
 	readThresholdsFromEnvironment()
-	readCooldownFromEnvironment()
+	readTimesFromEnvironment()
 	readBucketFromEnvironment()
 
 	log.Printf("critical threshold set to %d%%", critical)
 	log.Printf("cooldown set to %v", cooldown)
 	log.Printf("bucket set to %v", bucket)
+	log.Printf("watch time set to %v", watchTime)
 
 	processSignalTracker := make(map[int]*ProcessWatcher)
 
@@ -198,33 +200,24 @@ func readBucketFromEnvironment() {
 	bucket = asString
 }
 
-func readCooldownFromEnvironment() {
-	asString := os.Getenv("COOLDOWN")
-	if asString == "" {
-		return
-	}
+// parse if time vars are set in the environment variables, if not use the default ones.
+func readTimesFromEnvironment() {
 
-	val, err := time.ParseDuration(asString)
-	if err != nil {
-		log.Printf("error parsing COOLDOWN with time.ParseDuration: %v", err)
-		log.Print("falling back to legacy behavior")
-		legacyVal, err := strconv.ParseUint(asString, 10, 64)
-		if err != nil {
-			log.Printf("error parsing COOLDOWN as uint: %v", err)
-			return
+	cooldownEnv := os.Getenv("COOLDOWN")
+	if cooldownEnv != "" {
+		cooldownParsed, err := time.ParseDuration(cooldownEnv)
+		if err == nil {
+			cooldown = cooldownParsed
 		}
-		log.Print("detected usage of deprecated format of COOLDOWN, migrate to time.ParseDuration format as soon as possible")
-		val = time.Duration(legacyVal) * time.Second
 	}
 
-	cooldownEnv := val
-
-	if cooldownEnv < 0 {
-		log.Print("cooldown must be a positive number")
-		return
+	watchTimeEnv := os.Getenv("WATCH_TIME")
+	if watchTimeEnv != "" {
+		watchTimeParsed, err := time.ParseDuration(watchTimeEnv)
+		if err == nil {
+			watchTime = watchTimeParsed
+		}
 	}
-
-	cooldown = cooldownEnv
 }
 
 // envVarToUint64 converts the environment variable into a uint64, in case of
