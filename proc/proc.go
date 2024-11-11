@@ -79,12 +79,21 @@ func (p OsProcess) MemoryUsagePercent() (uint64, error) {
 }
 
 func (p OsProcess) PortsInUse() ([]int, error) {
+	// Buscar puertos en tcp (IPv4)
 	ports, err := readListeningPorts(fmt.Sprintf("/proc/%d/net/tcp", p.Pid()))
 	if err != nil {
 		return nil, err
 	}
-	return ports, nil
 
+	// Buscar puertos en tcp6 (IPv6)
+	ports6, err := readListeningPorts(fmt.Sprintf("/proc/%d/net/tcp6", p.Pid()))
+	if err != nil {
+		return nil, err
+	}
+
+	// Combinar puertos IPv4 e IPv6
+	ports = append(ports, ports6...)
+	return ports, nil
 }
 
 func readListeningPorts(filepath string) ([]int, error) {
@@ -96,7 +105,7 @@ func readListeningPorts(filepath string) ([]int, error) {
 
 	var ports []int
 	scanner := bufio.NewScanner(file)
-	// Skip the header line
+	// Saltar la línea de encabezado
 	scanner.Scan()
 
 	for scanner.Scan() {
@@ -105,21 +114,21 @@ func readListeningPorts(filepath string) ([]int, error) {
 			continue
 		}
 
-		// Extract the local address
+		// Extraer la dirección local
 		localAddress := fields[1]
 		ipPort := strings.Split(localAddress, ":")
-		if len(ipPort) != 2 {
+		if len(ipPort) < 2 {
 			continue
 		}
 
-		// Convert the port from hex to decimal
-		portHex := ipPort[1]
+		// Convertir el puerto de hexadecimal a decimal
+		portHex := ipPort[len(ipPort)-1] // Obtener el último elemento que es el puerto
 		port, err := strconv.ParseInt(portHex, 16, 64)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse port %s: %v", portHex, err)
 		}
 
-		// Check the state to ensure it's listening (state 0x0A is LISTEN)
+		// Verificar el estado para asegurarse de que esté en escucha (estado 0x0A es LISTEN)
 		state := fields[3]
 		if state == "0A" {
 			ports = append(ports, int(port))
